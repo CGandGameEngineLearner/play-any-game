@@ -1,0 +1,19 @@
+{
+  "name": "play-any-game-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "AI游戏代肝工具 - 截图+点击自动化",
+  "bin": {
+    "game": "./scripts/index.js"
+  },
+  "scripts": {
+    "game": "node scripts/index.js"
+  },
+  "dependencies": {
+    "screenshot-desktop": "^1.15.0",
+    "minimist": "^1.2.8"
+  },
+  "devDependencies": {
+    "tsx": "^4.7.0"
+  }
+}
