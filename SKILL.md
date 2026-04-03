@@ -92,6 +92,75 @@ AI：开始自动刷取...
 - 长时间挂机建议开启防烧屏措施
 - AI不会帮你做需要真正策略判断的高难度副本，只做重复性劳动
 
+## Node.js 自动化工具
+
+项目内置了一套 Node.js 截图+点击工具，提供更精确的屏幕控制能力。
+
+### 工具位置
+
+```
+C:\Users\lijinwen\lobsterai\project\play-any-game\
+├── scripts/
+│   ├── index.js       # CLI 主入口
+│   ├── screenshot.js  # 截图功能
+│   ├── window.js      # 窗口捕获
+│   ├── click.js       # 鼠标点击
+│   └── find-button.js # 按钮查找
+└── screenshots/       # 截图存放目录
+```
+
+### 安装依赖
+
+```bash
+cd C:\Users\lijinwen\lobsterai\project\play-any-game
+npm install
+```
+
+### CLI 命令
+
+| 命令 | 说明 | 示例 |
+|------|------|------|
+| `screenshot [窗口标题]` | 截取屏幕 | `npx tsx scripts/index.ts screenshot` |
+| `capture <窗口标题>` | 截取指定窗口 | `npx tsx scripts/index.ts capture "原神"` |
+| `click <x> <y>` | 点击坐标（0.2s后自动截图） | `npx tsx scripts/index.ts click 540 820` |
+| `find <按钮名称> [截图路径]` | 查找按钮位置 | `npx tsx scripts/index.ts find "开始挑战"` |
+
+### 典型工作流
+
+```bash
+# 1. 截取游戏窗口
+npx tsx scripts/index.ts capture "原神"
+# 返回: screenshots/screenshot_20260403_111920_500.png
+
+# 2. 查找按钮位置
+npx tsx scripts/index.ts find "开始挑战" screenshots/screenshot_20260403_111920_500.png
+# 返回: {x: 540, y: 820, confidence: 0.85}
+
+# 3. 点击按钮（点击后自动截图）
+npx tsx scripts/index.ts click 540 820
+# 返回: screenshots/screenshot_20260403_111923_700.png（新截图）
+
+# 4. 继续分析新截图执行下一步
+```
+
+### API 调用（JavaScript）
+
+```javascript
+import { takeScreenshot } from './scripts/screenshot.js';
+import { click } from './scripts/click.js';
+import { findButton } from './scripts/find-button.js';
+
+// 截图
+const screenshotPath = await takeScreenshot();
+
+// 查找按钮
+const button = await findButton(screenshotPath, '开始挑战');
+if (button) {
+    // 点击
+    const newScreenshot = await click(button.x, button.y);
+}
+```
+
 ## 参考资料
 
 - [game-ai-controller skill](../game-ai-controller/SKILL.md) - 游戏UI扫描和自动化控制
