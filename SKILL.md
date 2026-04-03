@@ -3,7 +3,7 @@ name: play-any-game
 description:AI游戏向导技能。玩家的专属游戏伴侣，提供攻略咨询、配队建议、资源规划、卡关指导等服务。当用户询问游戏问题、卡关求助、配队推荐、养成规划、攻略查询时使用。适用于所有游戏的向导服务，支持OpenClaw或其他agent平台接入。
 ---
 
-# Play Any Game - AI游戏向导
+# Play Any Game - AI游戏伴侣助手
 
 ## 核心定位
 
