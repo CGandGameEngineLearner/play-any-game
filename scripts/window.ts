@@ -74,4 +74,37 @@ export async function captureWindow(windowTitle: string): Promise<string> {
   }
 }
 
-export default { captureWindow };
+export interface WindowInfo {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  title: string;
+}
+
+export function getWindowInfo(windowTitle: string): WindowInfo | null {
+  const win = findWindowByTitle(windowTitle);
+  if (!win) return null;
+  
+  try {
+    const x = (win as any).x();
+    const y = (win as any).y();
+    const width = (win as any).width();
+    const height = (win as any).height();
+    const title = (win as any).title?.() || windowTitle;
+    
+    return { x, y, width, height, title };
+  } catch (e) {
+    console.error('[window] 获取窗口信息失败:', (e as Error).message);
+    return null;
+  }
+}
+
+export function toScreenCoords(relativeX: number, relativeY: number, windowInfo: WindowInfo): { x: number; y: number } {
+  return {
+    x: windowInfo.x + relativeX,
+    y: windowInfo.y + relativeY
+  };
+}
+
+export default { captureWindow, getWindowInfo, toScreenCoords };

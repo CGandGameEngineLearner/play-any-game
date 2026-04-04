@@ -1,5 +1,5 @@
 import { takeScreenshot } from './screenshot.js';
-import { captureWindow } from './window.js';
+import { captureWindow, getWindowInfo, toScreenCoords } from './window.js';
 import { click } from './click.js';
 import { findButton, findAllButtons } from './find-button.js';
 import minimist from 'minimist';
@@ -70,8 +70,9 @@ function printHelp(): void {
     截取指定窗口的截图。
     返回截图文件路径。
 
-  click <x> <y>
+  click <x> <y> [窗口标题]
     在指定坐标点击。
+    如果提供了窗口标题，则 x, y 是相对于窗口的坐标。
     点击后 0.2 秒自动截取新截图并返回路径。
 
   find <按钮名称> [截图路径]
@@ -84,7 +85,8 @@ function printHelp(): void {
 示例:
   npx tsx scripts/index.ts screenshot
   npx tsx scripts/index.ts capture "原神"
-  npx tsx scripts/index.ts click 540 820
+  npx tsx scripts/index.ts click 540 820 "原神"  # 相对于原神窗口的坐标
+  npx tsx scripts/index.ts click 1600 50              # 屏幕绝对坐标
   npx tsx scripts/index.ts find "开始挑战" screenshots/screenshot_20260403.png
 `);
 }
@@ -156,21 +158,42 @@ async function handleCapture(args: CommandArgs): Promise<string> {
 async function handleClick(args: CommandArgs): Promise<string | null> {
   const x = parseInt(args._[1]);
   const y = parseInt(args._[2]);
+  const windowTitle = args._[3];
   
   if (isNaN(x) || isNaN(y)) {
     console.error('[ERROR] 请提供有效的坐标');
-    console.log('用法: npx tsx scripts/index.ts click <x> <y>');
+    console.log('用法: npx tsx scripts/index.ts click <x> <y> [窗口标题]');
     process.exit(1);
   }
   
-  console.log('[CLI] 执行 click (' + x + ', ' + y + ')');
+  let finalX = x;
+  let finalY = y;
   
-  const newScreenshotPath = await click(x, y, true);
+  if (windowTitle) {
+    console.log('[CLI] 获取窗口信息: ' + windowTitle);
+    const winInfo = getWindowInfo(windowTitle);
+    if (!winInfo) {
+      console.error('[ERROR] 未找到窗口: ' + windowTitle);
+      process.exit(1);
+    }
+    
+    console.log('[CLI] 窗口位置: (' + winInfo.x + ', ' + winInfo.y + ')');
+    console.log('[CLI] 窗口大小: ' + winInfo.width + 'x' + winInfo.height);
+    
+    const screenCoords = toScreenCoords(x, y, winInfo);
+    finalX = screenCoords.x;
+    finalY = screenCoords.y;
+    console.log('[CLI] 相对坐标 (' + x + ', ' + y + ') -> 屏幕坐标 (' + finalX + ', ' + finalY + ')');
+  } else {
+    console.log('[CLI] 执行 click (屏幕坐标: ' + finalX + ', ' + finalY + ')');
+  }
+  
+  const newScreenshotPath = await click(finalX, finalY, true, windowTitle);
   
   const result: ClickResult = {
     action: 'click',
-    x: x,
-    y: y,
+    x: finalX,
+    y: finalY,
     screenshotPath: newScreenshotPath,
     timestamp: new Date().toISOString()
   };
