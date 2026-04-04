@@ -6,24 +6,96 @@ import os from 'os';
 
 const execAsync = promisify(exec);
 
-
-
 async function performClickWithPowerShell(x: number, y: number): Promise<void> {
-  const psScript = [
-    'Add-Type -AssemblyName System.Windows.Forms',
-    '',
-    '[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(' + x + ', ' + y + ')',
-    '[System.Windows.Forms.Mouse_event]::PerformClick([System.Windows.Forms.MouseButtons]::Left, ' + x + ', ' + y + ', 0, 0)',
-    '',
-    'Write-Output \'OK\''
-  ].join('\r\n');
+  const psScript = `
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+public class MouseInput {
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+    
+    [DllImport("user32.dll")]
+    public static extern bool SetCursorPos(int X, int Y);
+    
+    [StructLayout(LayoutKind.Sequential)]
+    public struct INPUT {
+        public uint type;
+        public InputUnion u;
+    }
+    
+    [StructLayout(LayoutKind.Explicit)]
+    public struct InputUnion {
+        [FieldOffset(0)] public MOUSEINPUT mi;
+    }
+    
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MOUSEINPUT {
+        public int dx;
+        public int dy;
+        public uint mouseData;
+        public uint dwFlags;
+        public uint time;
+        public IntPtr dwExtraInfo;
+    }
+    
+    public const int INPUT_MOUSE = 0;
+    public const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
+    public const uint MOUSEEVENTF_LEFTUP = 0x0004;
+    public const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
+    public const uint MOUSEEVENTF_RIGHTUP = 0x0010;
+    
+    public static void Click(int x, int y) {
+        SetCursorPos(x, y);
+        System.Threading.Thread.Sleep(50);
+        
+        INPUT[] inputs = new INPUT[2];
+        
+        inputs[0].type = INPUT_MOUSE;
+        inputs[0].u.mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+        
+        inputs[1].type = INPUT_MOUSE;
+        inputs[1].u.mi.dwFlags = MOUSEEVENTF_LEFTUP;
+        
+        SendInput(2, inputs, Marshal.SizeOf(typeof(INPUT)));
+    }
+    
+    public static void RightClick(int x, int y) {
+        SetCursorPos(x, y);
+        System.Threading.Thread.Sleep(50);
+        
+        INPUT[] inputs = new INPUT[2];
+        
+        inputs[0].type = INPUT_MOUSE;
+        inputs[0].u.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+        
+        inputs[1].type = INPUT_MOUSE;
+        inputs[1].u.mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+        
+        SendInput(2, inputs, Marshal.SizeOf(typeof(INPUT)));
+    }
+    
+    public static void MoveMouse(int x, int y) {
+        SetCursorPos(x, y);
+    }
+}
+'@
+
+[MouseInput]::Click($args[0], $args[1])
+Write-Output 'OK'
+`;
 
   const tmpDir = os.tmpdir();
   const scriptPath = path.join(tmpDir, 'click_' + Date.now() + '.ps1');
-  fs.writeFileSync(scriptPath, psScript, { encoding: 'utf8' });
+  
+  const BOM = Buffer.from([0xEF, 0xBB, 0xBF]);
+  const scriptContent = Buffer.from(psScript, 'utf8');
+  const scriptWithBOM = Buffer.concat([BOM, scriptContent]);
+  fs.writeFileSync(scriptPath, scriptWithBOM);
 
   try {
-    const { stdout } = await execAsync('powershell -ExecutionPolicy Bypass -File "' + scriptPath + '"');
+    const { stdout } = await execAsync('powershell -ExecutionPolicy Bypass -File "' + scriptPath + '" ' + x + ' ' + y);
     try { fs.unlinkSync(scriptPath); } catch (e) { }
     
     if (stdout.includes('OK')) {
@@ -50,18 +122,31 @@ export async function click(x: number, y: number, autoScreenshot: boolean = true
 }
 
 export async function moveMouse(x: number, y: number): Promise<void> {
-  const psScript = [
-    'Add-Type -AssemblyName System.Windows.Forms',
-    '[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(' + x + ', ' + y + ')',
-    'Write-Output \'OK\''
-  ].join('\r\n');
+  const psScript = `
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+public class MouseMove {
+    [DllImport("user32.dll")]
+    public static extern bool SetCursorPos(int X, int Y);
+}
+'@
+
+[MouseMove]::SetCursorPos($args[0], $args[1])
+Write-Output 'OK'
+`;
 
   const tmpDir = os.tmpdir();
   const scriptPath = path.join(tmpDir, 'move_mouse_' + Date.now() + '.ps1');
-  fs.writeFileSync(scriptPath, psScript, { encoding: 'utf8' });
+  
+  const BOM = Buffer.from([0xEF, 0xBB, 0xBF]);
+  const scriptContent = Buffer.from(psScript, 'utf8');
+  const scriptWithBOM = Buffer.concat([BOM, scriptContent]);
+  fs.writeFileSync(scriptPath, scriptWithBOM);
 
   try {
-    await execAsync('powershell -ExecutionPolicy Bypass -File "' + scriptPath + '"');
+    await execAsync('powershell -ExecutionPolicy Bypass -File "' + scriptPath + '" ' + x + ' ' + y);
     try { fs.unlinkSync(scriptPath); } catch (e) { }
     console.log('[click] 鼠标移动到: (' + x + ', ' + y + ')');
   } catch (err) {
@@ -71,25 +156,74 @@ export async function moveMouse(x: number, y: number): Promise<void> {
 }
 
 export async function rightClick(x: number, y: number): Promise<void> {
-  const psScript = [
-    'Add-Type -AssemblyName System.Windows.Forms',
-    '',
-    '$mouse_event = [System.Reflection.Assembly]::LoadWithPartialName("System.Windows.Forms") | Out-Null',
-    '$oldPos = [System.Windows.Forms.Cursor]::Position',
-    '[System.Windows.Forms.Cursor]::Position = New-Object System.Drawing.Point(' + x + ', ' + y + ')',
-    '[System.Windows.Forms.Mouse_event]::MouseEvent([System.Windows.Forms.MouseButtons]::Right, 0, 0, 0, 0)',
-    'Start-Sleep -Milliseconds 50',
-    '[System.Windows.Forms.Cursor]::Position = $oldPos',
-    '',
-    'Write-Output \'OK\''
-  ].join('\r\n');
+  const psScript = `
+Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+public class MouseRightClick {
+    [DllImport("user32.dll", SetLastError = true)]
+    public static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+    
+    [DllImport("user32.dll")]
+    public static extern bool SetCursorPos(int X, int Y);
+    
+    [StructLayout(LayoutKind.Sequential)]
+    public struct INPUT {
+        public uint type;
+        public InputUnion u;
+    }
+    
+    [StructLayout(LayoutKind.Explicit)]
+    public struct InputUnion {
+        [FieldOffset(0)] public MOUSEINPUT mi;
+    }
+    
+    [StructLayout(LayoutKind.Sequential)]
+    public struct MOUSEINPUT {
+        public int dx;
+        public int dy;
+        public uint mouseData;
+        public uint dwFlags;
+        public uint time;
+        public IntPtr dwExtraInfo;
+    }
+    
+    public const int INPUT_MOUSE = 0;
+    public const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
+    public const uint MOUSEEVENTF_RIGHTUP = 0x0010;
+    
+    public static void RightClick(int x, int y) {
+        SetCursorPos(x, y);
+        System.Threading.Thread.Sleep(50);
+        
+        INPUT[] inputs = new INPUT[2];
+        
+        inputs[0].type = INPUT_MOUSE;
+        inputs[0].u.mi.dwFlags = MOUSEEVENTF_RIGHTDOWN;
+        
+        inputs[1].type = INPUT_MOUSE;
+        inputs[1].u.mi.dwFlags = MOUSEEVENTF_RIGHTUP;
+        
+        SendInput(2, inputs, Marshal.SizeOf(typeof(INPUT)));
+    }
+}
+'@
+
+[MouseRightClick]::RightClick($args[0], $args[1])
+Write-Output 'OK'
+`;
 
   const tmpDir = os.tmpdir();
   const scriptPath = path.join(tmpDir, 'right_click_' + Date.now() + '.ps1');
-  fs.writeFileSync(scriptPath, psScript, { encoding: 'utf8' });
+  
+  const BOM = Buffer.from([0xEF, 0xBB, 0xBF]);
+  const scriptContent = Buffer.from(psScript, 'utf8');
+  const scriptWithBOM = Buffer.concat([BOM, scriptContent]);
+  fs.writeFileSync(scriptPath, scriptWithBOM);
 
   try {
-    const { stdout } = await execAsync('powershell -ExecutionPolicy Bypass -File "' + scriptPath + '"');
+    const { stdout } = await execAsync('powershell -ExecutionPolicy Bypass -File "' + scriptPath + '" ' + x + ' ' + y);
     try { fs.unlinkSync(scriptPath); } catch (e) { }
     
     if (stdout.includes('OK')) {
