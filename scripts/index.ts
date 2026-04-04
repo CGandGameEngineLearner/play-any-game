@@ -119,6 +119,9 @@ async function handleScreenshot(args: CommandArgs): Promise<string> {
     screenshotPath: screenshotPath,
     timestamp: new Date().toISOString()
   };
+  console.log('\n========================================');
+  console.log('📸 图片路径: ' + screenshotPath);
+  console.log('========================================\n');
   console.log(JSON.stringify(result, null, 2));
   
   return screenshotPath;
@@ -142,6 +145,9 @@ async function handleCapture(args: CommandArgs): Promise<string> {
     screenshotPath: screenshotPath,
     timestamp: new Date().toISOString()
   };
+  console.log('\n========================================');
+  console.log('📸 图片路径: ' + screenshotPath);
+  console.log('========================================\n');
   console.log(JSON.stringify(result, null, 2));
   
   return screenshotPath;
@@ -168,6 +174,11 @@ async function handleClick(args: CommandArgs): Promise<string | null> {
     screenshotPath: newScreenshotPath,
     timestamp: new Date().toISOString()
   };
+  if (newScreenshotPath) {
+    console.log('\n========================================');
+    console.log('📸 点击后截图路径: ' + newScreenshotPath);
+    console.log('========================================\n');
+  }
   console.log(JSON.stringify(result, null, 2));
   
   return newScreenshotPath;
