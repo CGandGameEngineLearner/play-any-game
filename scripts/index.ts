@@ -2,6 +2,7 @@ import { takeScreenshot } from './screenshot.js';
 import { captureWindow, getWindowInfo, toScreenCoords } from './window.js';
 import { click } from './click.js';
 import { findButton, findAllButtons } from './find-button.js';
+import { pressKey, holdKey, keySequence } from './keyboard.js';
 import minimist from 'minimist';
 import path from 'path';
 import fs from 'fs';
@@ -48,6 +49,7 @@ const COMMANDS = {
   screenshot: 'screenshot',
   capture: 'capture',
   click: 'click',
+  key: 'key',
   find: 'find',
   findAll: 'find-all',
   help: 'help',
@@ -75,6 +77,14 @@ function printHelp(): void {
     如果提供了窗口标题，则 x, y 是相对于窗口的坐标。
     点击后 0.2 秒自动截取新截图并返回路径。
 
+  key <按键名> [--screenshot]
+    按下指定按键。
+    使用 --screenshot 选项在按键后自动截图。
+    支持的按键: W, A, S, D, Q, E, R, T, Z, X, C, V, B, N, M
+               F, G, H, J, K, L, Y, U, I, O, P, 1-9, 0
+               Space, Enter, Escape/Esc, Tab, Shift, Ctrl, Alt
+               F1, F2, F3, F4, F5, F6, F7, F8
+
   find <按钮名称> [截图路径]
     在截图中查找按钮位置。
     返回匹配区域的中心坐标 {x, y}。
@@ -87,6 +97,8 @@ function printHelp(): void {
   npx tsx scripts/index.ts capture "原神"
   npx tsx scripts/index.ts click 540 820 "原神"  # 相对于原神窗口的坐标
   npx tsx scripts/index.ts click 1600 50              # 屏幕绝对坐标
+  npx tsx scripts/index.ts key LeftAlt --screenshot     # 按 Alt 键呼出鼠标
+  npx tsx scripts/index.ts key Space --screenshot       # 按空格键
   npx tsx scripts/index.ts find "开始挑战" screenshots/screenshot_20260403.png
 `);
 }
@@ -150,6 +162,45 @@ async function handleCapture(args: CommandArgs): Promise<string> {
   console.log('\n========================================');
   console.log('📸 图片路径: ' + screenshotPath);
   console.log('========================================\n');
+  console.log(JSON.stringify(result, null, 2));
+  
+  return screenshotPath;
+}
+
+async function handleKey(args: any): Promise<string | null> {
+  const keyName = args._[1];
+  const autoScreenshot = args.screenshot || false;
+  
+  if (!keyName) {
+    console.error('[ERROR] 请提供按键名称');
+    console.log('用法: npx tsx scripts/index.ts key <按键名> [--screenshot]');
+    process.exit(1);
+  }
+  
+  console.log('[CLI] 执行 key (按键: ' + keyName + ')');
+  
+  await pressKey(keyName, 200);
+  
+  let screenshotPath: string | null = null;
+  if (autoScreenshot) {
+    const { takeScreenshot } = await import('./screenshot.js');
+    console.log('[CLI] 等待 300ms 后截图...');
+    await new Promise(resolve => setTimeout(resolve, 300));
+    screenshotPath = await takeScreenshot();
+  }
+  
+  const result = {
+    action: 'key',
+    key: keyName,
+    screenshotPath: screenshotPath,
+    timestamp: new Date().toISOString()
+  };
+  
+  if (screenshotPath) {
+    console.log('\n========================================');
+    console.log('📸 按键后截图路径: ' + screenshotPath);
+    console.log('========================================\n');
+  }
   console.log(JSON.stringify(result, null, 2));
   
   return screenshotPath;
@@ -265,7 +316,7 @@ async function handleFindAll(args: CommandArgs): Promise<ButtonMatch[]> {
 }
 
 async function main(): Promise<void> {
-  const args = minimist(process.argv.slice(2)) as CommandArgs;
+  const args = minimist(process.argv.slice(2)) as any;
   const command = args._[0];
 
   console.log(`[CLI] 游戏代肝工具启动，命令: ${command || '(无)'}`);
@@ -282,6 +333,10 @@ async function main(): Promise<void> {
 
       case COMMANDS.click:
         await handleClick(args);
+        break;
+
+      case COMMANDS.key:
+        await handleKey(args);
         break;
 
       case COMMANDS.find:
