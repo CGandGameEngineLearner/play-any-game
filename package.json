@@ -4,16 +4,25 @@
   "type": "module",
   "description": "AI游戏代肝工具 - 截图+点击自动化",
   "bin": {
-    "game": "./scripts/index.js"
+    "game": "./scripts/index.ts"
   },
   "scripts": {
-    "game": "node scripts/index.js"
+    "game": "tsx scripts/index.ts",
+    "build": "tsc",
+    "dev": "tsx scripts/index.ts",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "screenshot-desktop": "^1.15.0",
-    "minimist": "^1.2.8"
+    "minimist": "^1.2.8",
+    "node-screenshots": "^0.2.8",
+    "screenshot-desktop": "^1.15.3",
+    "window-screenshot": "^1.0.0",
+    "windows-ss": "^1.0.1-xx"
   },
   "devDependencies": {
-    "tsx": "^4.7.0"
+    "@types/minimist": "^1.2.5",
+    "@types/node": "^20.10.6",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
   }
 }

@@ -1,4 +1,6 @@
 node_modules/
-package-lock.json
-*.png
+dist/
+*.log
+.DS_Store
+screenshots/*.png
 !screenshots/.gitkeep
