@@ -26,6 +26,10 @@ function getTimestamp(): string {
   return `${year}${month}${day}_${hours}${minutes}${seconds}_${ms}`;
 }
 
+function sanitizeFileName(name: string): string {
+  return name.replace(/[<>:"/\\|?*]/g, '_').replace(/\s+/g, '_');
+}
+
 async function takeScreenshotWithNodeScreenshots(filepath: string): Promise<string> {
   try {
     // 截取主屏幕
@@ -56,7 +60,13 @@ export async function takeScreenshot(windowTitle?: string): Promise<string> {
   ensureScreenshotsDir();
 
   const timestamp = getTimestamp();
-  const filename = 'screenshot_' + timestamp + '.png';
+  let filename = 'screenshot_' + timestamp + '.png';
+  
+  if (windowTitle) {
+    const sanitizedTitle = sanitizeFileName(windowTitle);
+    filename = 'screenshot_' + sanitizedTitle + '_' + timestamp + '.png';
+  }
+  
   const filepath = path.join(SCREENSHOTS_DIR, filename);
 
   try {
