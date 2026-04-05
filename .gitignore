@@ -4,3 +4,12 @@ dist/
 .DS_Store
 screenshots/*.png
 !screenshots/.gitkeep
+
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+.venv/
