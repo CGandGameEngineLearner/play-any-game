@@ -185,6 +185,11 @@ def handle_key(args):
     print(f'[CLI] 执行 key ({key_name})' + (f' 窗口: {window_title}' if window_title else ''))
     
     try:
+        if window_title:
+            print(f'[keyboard] 激活窗口: {window_title}')
+            activate_window(window_title)
+            time.sleep(0.1)
+        
         press_key(key_name, 100)
         
         print('[CLI] 等待 300ms 后截图...')
@@ -212,6 +217,11 @@ def handle_hold(args):
     print(f'[CLI] 执行 hold ({key_name}, {hold_ms}ms)' + (f' 窗口: {window_title}' if window_title else ''))
     
     try:
+        if window_title:
+            print(f'[keyboard] 激活窗口: {window_title}')
+            activate_window(window_title)
+            time.sleep(0.1)
+        
         hold_key(key_name, hold_ms, 200)
         
         print('[CLI] 等待 300ms 后截图...')
