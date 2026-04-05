@@ -73,7 +73,6 @@ def create_result(action: str, **kwargs) -> dict:
 
 def handle_screenshot(args):
     window_title = args.window_title if hasattr(args, 'window_title') and args.window_title else None
-    print(f'[CLI] 执行 screenshot' + (f' (窗口: {window_title})' if window_title else ''))
     
     try:
         screenshot_path = take_screenshot(window_title)
@@ -82,21 +81,18 @@ def handle_screenshot(args):
             windowTitle=window_title,
             screenshotPath=screenshot_path
         )
-        print(f'📸 图片路径: {screenshot_path}')
+        print(f'📸 {screenshot_path}')
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return screenshot_path
     except Exception as e:
-        print(f'[ERROR] 截图失败: {e}')
+        print(f'[ERROR] {e}')
         sys.exit(1)
 
 def handle_capture(args):
     window_title = args.window_title
     if not window_title:
         print('[ERROR] 请指定窗口标题')
-        print('用法: python main.py capture <窗口标题>')
         sys.exit(1)
-    
-    print(f'[CLI] 执行 capture (窗口: {window_title})')
     
     try:
         screenshot_path = take_screenshot(window_title)
@@ -105,11 +101,11 @@ def handle_capture(args):
             windowTitle=window_title,
             screenshotPath=screenshot_path
         )
-        print(f'📸 图片路径: {screenshot_path}')
+        print(f'📸 {screenshot_path}')
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return screenshot_path
     except Exception as e:
-        print(f'[ERROR] 截图失败: {e}')
+        print(f'[ERROR] {e}')
         sys.exit(1)
 
 def handle_click(args):
@@ -118,15 +114,11 @@ def handle_click(args):
     window_title = args.window_title if hasattr(args, 'window_title') and args.window_title else None
     background = args.background if hasattr(args, 'background') else False
     
-    print(f'[CLI] 执行 click ({x}, {y})' + (f' 窗口: {window_title}' if window_title else ''))
-    
     try:
         success = click(x, y, window_title, background)
         if not success:
-            print('[ERROR] 点击失败')
             sys.exit(1)
         
-        print('[CLI] 等待 200ms 后截图...')
         time.sleep(0.2)
         screenshot_path = take_screenshot(window_title)
         
@@ -138,11 +130,11 @@ def handle_click(args):
             background=background,
             screenshotPath=screenshot_path
         )
-        print(f'📸 点击后截图路径: {screenshot_path}')
+        print(f'📸 {screenshot_path}')
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return screenshot_path
     except Exception as e:
-        print(f'[ERROR] 点击失败: {e}')
+        print(f'[ERROR] {e}')
         sys.exit(1)
 
 def handle_rightclick(args):
@@ -151,15 +143,11 @@ def handle_rightclick(args):
     window_title = args.window_title if hasattr(args, 'window_title') and args.window_title else None
     background = args.background if hasattr(args, 'background') else False
     
-    print(f'[CLI] 执行 rightclick ({x}, {y})' + (f' 窗口: {window_title}' if window_title else ''))
-    
     try:
         success = right_click(x, y, window_title, background)
         if not success:
-            print('[ERROR] 右键点击失败')
             sys.exit(1)
         
-        print('[CLI] 等待 200ms 后截图...')
         time.sleep(0.2)
         screenshot_path = take_screenshot(window_title)
         
@@ -171,28 +159,24 @@ def handle_rightclick(args):
             background=background,
             screenshotPath=screenshot_path
         )
-        print(f'📸 右键点击后截图路径: {screenshot_path}')
+        print(f'📸 {screenshot_path}')
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return screenshot_path
     except Exception as e:
-        print(f'[ERROR] 右键点击失败: {e}')
+        print(f'[ERROR] {e}')
         sys.exit(1)
 
 def handle_key(args):
     key_name = args.key
     window_title = args.window_title if hasattr(args, 'window_title') and args.window_title else None
     
-    print(f'[CLI] 执行 key ({key_name})' + (f' 窗口: {window_title}' if window_title else ''))
-    
     try:
         if window_title:
-            print(f'[keyboard] 激活窗口: {window_title}')
             activate_window(window_title)
             time.sleep(0.1)
         
         press_key(key_name, 100)
         
-        print('[CLI] 等待 300ms 后截图...')
         time.sleep(0.3)
         screenshot_path = take_screenshot(window_title)
         
@@ -202,11 +186,11 @@ def handle_key(args):
             windowTitle=window_title,
             screenshotPath=screenshot_path
         )
-        print(f'📸 按键后截图路径: {screenshot_path}')
+        print(f'📸 {screenshot_path}')
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return screenshot_path
     except Exception as e:
-        print(f'[ERROR] 按键失败: {e}')
+        print(f'[ERROR] {e}')
         sys.exit(1)
 
 def handle_hold(args):
@@ -214,17 +198,13 @@ def handle_hold(args):
     hold_ms = args.hold_ms
     window_title = args.window_title if hasattr(args, 'window_title') and args.window_title else None
     
-    print(f'[CLI] 执行 hold ({key_name}, {hold_ms}ms)' + (f' 窗口: {window_title}' if window_title else ''))
-    
     try:
         if window_title:
-            print(f'[keyboard] 激活窗口: {window_title}')
             activate_window(window_title)
             time.sleep(0.1)
         
         hold_key(key_name, hold_ms, 200)
         
-        print('[CLI] 等待 300ms 后截图...')
         time.sleep(0.3)
         screenshot_path = take_screenshot(window_title)
         
@@ -235,18 +215,17 @@ def handle_hold(args):
             windowTitle=window_title,
             screenshotPath=screenshot_path
         )
-        print(f'📸 按住后截图路径: {screenshot_path}')
+        print(f'📸 {screenshot_path}')
         print(json.dumps(result, indent=2, ensure_ascii=False))
         return screenshot_path
     except Exception as e:
-        print(f'[ERROR] 按住失败: {e}')
+        print(f'[ERROR] {e}')
         sys.exit(1)
 
 def handle_windows(args):
-    print('[CLI] 列出所有可见窗口:')
     windows = list_windows()
     for i, win in enumerate(windows, 1):
-        print(f'{i}. [{win["hwnd"]}] {win["title"]}')
+        print(f'{i}. {win["title"]}')
     
     result = create_result('windows', windows=windows)
     print(json.dumps(result, indent=2, ensure_ascii=False))
@@ -290,8 +269,6 @@ def main():
     if not args.command:
         print_help()
         return
-    
-    print(f'[CLI] 游戏代肝工具启动，命令: {args.command}')
     
     commands = {
         'screenshot': handle_screenshot,

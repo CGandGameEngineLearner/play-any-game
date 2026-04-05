@@ -1,7 +1,8 @@
 import os
 import time
+import ctypes
 from datetime import datetime
-from typing import Optional
+from typing import Optional, Tuple
 import win32gui
 import win32ui
 import win32con
@@ -9,10 +10,33 @@ from PIL import Image
 
 SCREENSHOTS_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'screenshots')
 
-def ensure_screenshots_dir():
-    """确保截图目录存在"""
-    if not os.path.exists(SCREENSHOTS_DIR):
-        os.makedirs(SCREENSHOTS_DIR)
+user32 = ctypes.windll.user32
+dwmapi = ctypes.windll.dwmapi
+
+class RECT(ctypes.Structure):
+    _fields_ = [
+        ('left', ctypes.c_long),
+        ('top', ctypes.c_long),
+        ('right', ctypes.c_long),
+        ('bottom', ctypes.c_long)
+    ]
+
+def ensure_screenshots_dir(game_name: Optional[str] = None):
+    """
+    确保截图目录存在
+    
+    Args:
+        game_name: 游戏名称，用于按游戏分类整理
+    """
+    if game_name:
+        target_dir = os.path.join(SCREENSHOTS_DIR, sanitize_filename(game_name))
+    else:
+        target_dir = SCREENSHOTS_DIR
+    
+    if not os.path.exists(target_dir):
+        os.makedirs(target_dir)
+    
+    return target_dir
 
 def get_timestamp() -> str:
     """获取时间戳字符串"""
@@ -25,6 +49,53 @@ def sanitize_filename(name: str) -> str:
     for char in invalid_chars:
         name = name.replace(char, '_')
     return name.replace(' ', '_')
+
+def get_window_rect_dwm(hwnd: int) -> Optional[Tuple[int, int, int, int]]:
+    """
+    使用 DwmGetWindowAttribute 获取窗口位置
+    """
+    try:
+        rect = RECT()
+        DWMWA_EXTENDED_FRAME_BOUNDS = 9
+        dwmapi.DwmGetWindowAttribute(
+            hwnd,
+            DWMWA_EXTENDED_FRAME_BOUNDS,
+            ctypes.byref(rect),
+            ctypes.sizeof(rect)
+        )
+        return (rect.left, rect.top, rect.right, rect.bottom)
+    except Exception:
+        return None
+
+def get_capture_rect(hwnd: int) -> Optional[Tuple[int, int, int, int]]:
+    """
+    获取实际可捕获的游戏区域（客户区在屏幕上的位置）
+    与 click.py 保持一致
+    """
+    try:
+        window_rect = get_window_rect_dwm(hwnd)
+        if not window_rect:
+            return None
+        
+        client_rect = win32gui.GetClientRect(hwnd)
+        if not client_rect:
+            return None
+        
+        win_left, win_top, win_right, win_bottom = window_rect
+        client_left, client_top, client_right, client_bottom = client_rect
+        
+        client_width = client_right - client_left
+        client_height = client_bottom - client_top
+        win_height = win_bottom - win_top
+        
+        left = win_left
+        top = win_top + win_height - client_height
+        right = left + client_width
+        bottom = top + client_height
+        
+        return (left, top, right, bottom)
+    except Exception:
+        return None
 
 def capture_screen() -> Image.Image:
     """截取全屏"""
@@ -60,23 +131,31 @@ def capture_screen() -> Image.Image:
     
     return img
 
-def capture_window(window_title: str) -> Optional[Image.Image]:
-    """截取指定窗口"""
+def capture_window_client_area(window_title: str) -> Optional[Image.Image]:
+    """
+    截取指定窗口的客户区（游戏画面区域）
+    与 click.py 使用相同的坐标系
+    """
     hwnd = win32gui.FindWindow(None, window_title)
     if not hwnd:
-        print(f'[screenshot] 未找到窗口: {window_title}')
+        print(f'[screenshot] 错误: 未找到窗口 "{window_title}"')
         return None
     
     if win32gui.IsIconic(hwnd):
-        print('[screenshot] 窗口被最小化，正在恢复...')
         win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
         time.sleep(0.3)
     
-    left, top, right, bottom = win32gui.GetWindowRect(hwnd)
+    capture_rect = get_capture_rect(hwnd)
+    if not capture_rect:
+        print('[screenshot] 错误: 无法获取窗口捕获区域')
+        return None
+    
+    left, top, right, bottom = capture_rect
     width = right - left
     height = bottom - top
     
-    hwndDC = win32gui.GetWindowDC(hwnd)
+    hdesktop = win32gui.GetDesktopWindow()
+    hwndDC = win32gui.GetWindowDC(hdesktop)
     mfcDC = win32ui.CreateDCFromHandle(hwndDC)
     saveDC = mfcDC.CreateCompatibleDC()
     
@@ -84,7 +163,7 @@ def capture_window(window_title: str) -> Optional[Image.Image]:
     saveBitMap.CreateCompatibleBitmap(mfcDC, width, height)
     saveDC.SelectObject(saveBitMap)
     
-    result = saveDC.BitBlt((0, 0), (width, height), mfcDC, (0, 0), win32con.SRCCOPY)
+    saveDC.BitBlt((0, 0), (width, height), mfcDC, (left, top), win32con.SRCCOPY)
     
     bmpinfo = saveBitMap.GetInfo()
     bmpstr = saveBitMap.GetBitmapBits(True)
@@ -98,7 +177,7 @@ def capture_window(window_title: str) -> Optional[Image.Image]:
     win32gui.DeleteObject(saveBitMap.GetHandle())
     saveDC.DeleteDC()
     mfcDC.DeleteDC()
-    win32gui.ReleaseDC(hwnd, hwndDC)
+    win32gui.ReleaseDC(hdesktop, hwndDC)
     
     return img
 
@@ -107,37 +186,29 @@ def take_screenshot(window_title: Optional[str] = None) -> str:
     截图并保存
     
     Args:
-        window_title: 窗口标题（可选）
+        window_title: 窗口标题（可选），用于按游戏分类整理
     
     Returns:
         截图文件的相对路径
     """
-    ensure_screenshots_dir()
+    target_dir = ensure_screenshots_dir(window_title)
     
     timestamp = get_timestamp()
-    if window_title:
-        safe_title = sanitize_filename(window_title)
-        filename = f'screenshot_{safe_title}_{timestamp}.png'
-    else:
-        filename = f'screenshot_{timestamp}.png'
+    filename = f'screenshot_{timestamp}.png'
     
-    filepath = os.path.join(SCREENSHOTS_DIR, filename)
+    filepath = os.path.join(target_dir, filename)
     
     try:
         if window_title:
-            print(f'[screenshot] 截取窗口: {window_title}')
-            img = capture_window(window_title)
+            img = capture_window_client_area(window_title)
             if img is None:
-                print('[screenshot] 窗口截图失败，尝试全屏截图')
                 img = capture_screen()
         else:
-            print('[screenshot] 截取全屏')
             img = capture_screen()
         
         img.save(filepath)
-        print(f'[screenshot] 截图已保存: {filepath}')
         
         return os.path.relpath(filepath, os.path.dirname(__file__))
     except Exception as e:
-        print(f'[screenshot] 截图失败: {e}')
+        print(f'[screenshot] 错误: {e}')
         raise
