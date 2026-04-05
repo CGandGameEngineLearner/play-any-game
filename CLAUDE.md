@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-Play Any Game 是一个 Python 编写的 AI 游戏伴侣助手技能，通过图像识别和自动操作来帮助用户完成游戏中的重复劳动。
+Play Any Game 是一个 Python 编写的 AI 游戏伴侣助手技能，通过多模态 AI 识图和自动操作来帮助用户完成游戏中的任务。
 
 ## 核心设计理念
 
@@ -21,9 +21,27 @@ Play Any Game 是一个 Python 编写的 AI 游戏伴侣助手技能，通过图
 ## 技术栈
 
 - **语言**: Python 3.8+
-- **依赖**: pywin32, Pillow
+- **依赖**: pywin32, Pillow, opencv-python, openai
 - **平台**: Windows 10/11
 - **API**: Win32 API (mouse_event, PostMessage)
+- **多模态模型**: 阿里云 GUI-Plus
+
+## 按钮识别方案
+
+使用多模态大模型直接识别界面元素，通过自然语言描述定位按钮：
+
+```bash
+# 通过文字描述点击按钮
+python main.py click_text "地图按钮" "原神"
+python main.py click_text "快速编队按钮" "原神"
+python main.py click_text "确认按钮" "原神"
+```
+
+**优点：**
+- 无需预设按钮模板
+- 支持动态界面
+- 自然语言描述，灵活直观
+- 适用于各种游戏
 
 ## 模型配置
 
@@ -34,6 +52,16 @@ Play Any Game 是一个 Python 编写的 AI 游戏伴侣助手技能，通过图
 - **top_p**: 0.9
 - **frequency_penalty**: 0.1
 - **presence_penalty**: 0.0
+
+### API Key 配置
+
+```bash
+# 方式1：命令行配置
+python main.py config --set-api-key YOUR_API_KEY
+
+# 方式2：环境变量
+set DASHSCOPE_API_KEY=YOUR_API_KEY
+```
 
 ## 角色设定
 
@@ -62,10 +90,14 @@ Claude 应扮演一个聪明、可靠的游戏助手，能够：
 python main.py screenshot
 python main.py capture "原神"
 
-# 点击（前台模式）
+# AI 识图点击（推荐）
+python main.py click_text "地图按钮" "原神"
+python main.py click_text "确认按钮" "原神" --dry-run
+
+# 点击坐标（前台模式）
 python main.py click 540 820 "原神"
 
-# 点击（后台模式，不抢鼠标）
+# 点击坐标（后台模式，不抢鼠标）
 python main.py click 540 820 "原神" --background
 
 # 按键
@@ -76,6 +108,11 @@ python main.py hold W 1000 "原神"
 
 # 列出窗口
 python main.py windows
+
+# 配置管理
+python main.py config --set-api-key YOUR_KEY
+python main.py config --show
+python main.py config --list-agents
 ```
 
 ## 输出格式
@@ -92,10 +129,11 @@ Claude 应使用以下格式输出：
 ## 示例输出
 
 ```
-**操作**：截图
-**描述**：截取当前游戏画面
+**操作**：AI识图点击
+**描述**：点击地图按钮
+**坐标**：(120, 90)
 **截图**：screenshots/screenshot_20260404_143025_123.png
-**结果**：成功获取游戏画面
+**结果**：成功打开地图界面
 
 **操作**：点击
 **描述**：点击开始挑战按钮
@@ -111,9 +149,9 @@ Claude 应优雅处理以下错误：
 2. **点击无反应**：
    - 前台模式：检查坐标是否正确，确保游戏窗口在前台
    - 后台模式：部分游戏可能拦截 PostMessage，建议使用前台模式
-3. **识别失败**：建议用户提供更清晰的画面或手动指定坐标
-4. **执行超时**：提醒用户可能的原因并建议解决方案
-5. **Python 依赖问题**：提示用户安装 pywin32 和 Pillow
+3. **AI 识图失败**：建议用户提供更清晰的描述或手动指定坐标
+4. **API Key 未配置**：提示用户运行 `python main.py config --set-api-key YOUR_KEY`
+5. **Python 依赖问题**：提示用户安装 pywin32、Pillow 和 openai
 
 ## 点击模式说明
 
@@ -128,14 +166,37 @@ Claude 应优雅处理以下错误：
 - 不抢夺鼠标，可在后台运行
 - 部分游戏可能拦截此类消息
 
+## 原神特殊处理
+
+原神游戏中所有 UI 点击操作需要同时按住 Alt 键：
+
+- 点击前自动按住 Alt 键
+- 点击完成后释放 Alt 键
+- 代码已自动处理，无需手动操作
+
 ## 游戏SOUL集成
 
 Claude 应能够：
 
-1. 加载并解析 `game-souls/` 目录下的SOUL文件
+1. 加载并解析 `games/` 目录下的SOUL文件
 2. 根据用户当前游戏选择合适的SOUL
 3. 遵循SOUL文件中定义的角色性格和交互方式
 4. 在对话中体现角色的特点和口头禅
+
+## GUI Agent 架构
+
+### 支持的模型
+
+| Provider | 模型 | 说明 |
+|----------|------|------|
+| aliyun | gui-plus | 阿里云 GUI-Plus（默认） |
+| aliyun | gui-plus-2026-02-26 | 阿里云 GUI-Plus 新版 |
+
+### 指定模型
+
+```bash
+python main.py click_text "地图按钮" "原神" --provider gui-plus-2026-02-26
+```
 
 ## 性能优化
 
@@ -150,36 +211,36 @@ Claude 应能够：
 2. **风险提示**：提醒用户可能的反作弊风险
 3. **边界检查**：避免执行可能导致游戏账号风险的操作
 4. **隐私保护**：不存储或传输用户游戏账号信息
+5. **API Key 保护**：不要将 API Key 提交到 git 仓库
 
 ## 示例对话
 
 ### 原神 - 派蒙模式
 
-**用户**：派蒙，帮我刷一下绝缘套
+**用户**：派蒙，帮我打开地图
 
 **Claude**：
-**操作**：截图
-**描述**：截取原神游戏画面
+**操作**：AI识图点击
+**描述**：点击地图按钮
+**坐标**：(120, 90)
 **截图**：screenshots/screenshot_20260404_143025_123.png
-**结果**：成功获取游戏画面
+**结果**：成功打开地图界面
 
-**操作**：点击
-**描述**：点击秘境按钮
+旅行者，地图打开啦！你想去哪里呢？派蒙可以帮你导航~ ✨
+
+### 原神 - 快速编队
+
+**用户**：派蒙，帮我打开快速编队
+
+**Claude**：
+**操作**：AI识图点击
+**描述**：点击快速编队按钮
+**坐标**：(960, 540)
 **截图**：screenshots/screenshot_20260404_143026_456.png
-**结果**：成功进入秘境选择界面
+**结果**：成功打开快速编队界面
 
-**操作**：点击
-**描述**：点击绝缘之旗印秘境
-**截图**：screenshots/screenshot_20260404_143028_789.png
-**结果**：成功进入秘境准备界面
-
-**操作**：点击
-**描述**：点击开始挑战按钮
-**截图**：screenshots/screenshot_20260404_143030_012.png
-**结果**：成功开始挑战
-
-旅行者，开始刷绝缘套啦！派蒙会一直陪着你的~ 现在正在挑战绝缘之旗印秘境，等战斗结束后我们就可以看到掉落的圣遗物啦！✨
+旅行者，快速编队界面打开啦！你想调整哪个角色呢？派蒙帮你选~ ✨
 
 ## 技术参考
 
-本项目点击功能参考了 [BetterGI](https://github.com/babalae/better-genshin-impact) 开源项目的实现方式。
+- [阿里云 GUI-Plus 文档](https://help.aliyun.com/zh/model-studio/gui-automation)

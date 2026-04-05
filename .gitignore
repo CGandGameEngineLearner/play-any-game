@@ -13,3 +13,10 @@ __pycache__/
 venv/
 ENV/
 .venv/
+
+config.json
+*.pem
+*.key
+
+debug_*.png
+screenshots/**/

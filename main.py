@@ -3,13 +3,30 @@ import argparse
 import json
 import sys
 import time
+import os
 from datetime import datetime
 from typing import Optional
+from PIL import Image
 
 from scripts.click import click, right_click
-from scripts.keyboard import press_key, hold_key
+from scripts.keyboard import press_key, hold_key, key_down, key_up
 from scripts.screenshot import take_screenshot
 from scripts.window import get_window_info, activate_window, list_windows, find_window_by_partial_title
+from scripts.recognition import find_button, find_all_buttons, list_available_buttons
+from scripts.gui_agent import get_agent, list_available_agents
+from scripts.config import get_gui_agent_config, get_api_key
+
+GAME_ALIASES = {
+    '原神': 'genshin-impact',
+    'genshin': 'genshin-impact',
+    '崩坏：星穹铁道': 'honkai-starrail',
+    '星铁': 'honkai-starrail',
+    'starrail': 'honkai-starrail',
+}
+
+def get_game_id(game_name: str) -> str:
+    """获取游戏ID（处理别名）"""
+    return GAME_ALIASES.get(game_name, game_name)
 
 def print_help():
     help_text = """
@@ -49,16 +66,27 @@ def print_help():
     按住指定按键一段时间(毫秒)。
     松开后自动截图。
 
+  find <按钮名称> <窗口标题> [--game <游戏名>] [--threshold <阈值>]
+    在截图中查找按钮并返回坐标。
+    找到后可以直接用返回的坐标点击。
+    --game: 指定游戏名称（默认根据窗口标题自动识别）
+    --threshold: 匹配阈值（默认 0.8）
+
+  findall <窗口标题> [--game <游戏名>]
+    查找截图中所有可识别的按钮。
+
+  buttons <游戏名>
+    列出游戏可用的按钮模板。
+
   windows
     列出所有可见窗口。
 
 示例:
   python main.py screenshot
   python main.py capture "原神"
+  python main.py find feedback "原神"
   python main.py click 540 820 "原神"
-  python main.py click 540 820 "原神" --background
-  python main.py key LeftAlt "原神"
-  python main.py hold W 1000 "原神"
+  python main.py key Escape "原神"
 """
     print(help_text)
 
@@ -70,6 +98,33 @@ def create_result(action: str, **kwargs) -> dict:
     }
     result.update(kwargs)
     return result
+
+def get_screenshot_dir() -> str:
+    """获取截图目录"""
+    return os.path.join(os.path.dirname(__file__), 'screenshots')
+
+def load_latest_screenshot(window_title: Optional[str] = None) -> Optional[Image.Image]:
+    """加载最新的截图"""
+    screenshots_dir = get_screenshot_dir()
+    
+    if window_title:
+        safe_title = window_title.replace(' ', '_').replace(':', '_')
+        for c in '<>"\\/|?*':
+            safe_title = safe_title.replace(c, '_')
+        game_dir = os.path.join(screenss_dir, safe_title)
+        if os.path.exists(game_dir):
+            screenshots_dir = game_dir
+    
+    if not os.path.exists(screenshots_dir):
+        return None
+    
+    files = [f for f in os.listdir(screenshots_dir) if f.endswith('.png')]
+    if not files:
+        return None
+    
+    files.sort(reverse=True)
+    latest = os.path.join(screenshots_dir, files[0])
+    return Image.open(latest)
 
 def handle_screenshot(args):
     window_title = args.window_title if hasattr(args, 'window_title') and args.window_title else None
@@ -222,6 +277,242 @@ def handle_hold(args):
         print(f'[ERROR] {e}')
         sys.exit(1)
 
+def handle_find(args):
+    button_name = args.button_name
+    window_title = args.window_title
+    game_name = args.game if hasattr(args, 'game') and args.game else get_game_id(window_title)
+    threshold = args.threshold if hasattr(args, 'threshold') else 0.8
+    
+    try:
+        game_width = None
+        if window_title:
+            win_info = get_window_info(window_title)
+            if win_info:
+                game_width = win_info['width']
+        
+        screenshot_path = take_screenshot(window_title)
+        
+        screenshot_fullpath = os.path.join(os.path.dirname(__file__), screenshot_path.replace('..\\', '').replace('../', ''))
+        screenshot = Image.open(screenshot_fullpath)
+        
+        result = find_button(screenshot, game_name, button_name, threshold, game_width=game_width)
+        
+        if result:
+            result_data = create_result(
+                'find',
+                buttonName=button_name,
+                windowTitle=window_title,
+                game=game_name,
+                **result,
+                screenshotPath=screenshot_path
+            )
+            print(f'[{game_name}] Found button "{button_name}": ({result["x"]}, {result["y"]}) confidence: {result["confidence"]}')
+            print(json.dumps(result_data, indent=2, ensure_ascii=False))
+        else:
+            print(f'[{game_name}] Button "{button_name}" not found')
+            result_data = create_result(
+                'find',
+                buttonName=button_name,
+                windowTitle=window_title,
+                game=game_name,
+                found=False,
+                screenshotPath=screenshot_path
+            )
+            print(json.dumps(result_data, indent=2, ensure_ascii=False))
+        
+        return result
+    except Exception as e:
+        print(f'[ERROR] {e}')
+        sys.exit(1)
+
+def handle_findall(args):
+    window_title = args.window_title
+    game_name = args.game if hasattr(args, 'game') and args.game else get_game_id(window_title)
+    
+    try:
+        game_width = None
+        if window_title:
+            win_info = get_window_info(window_title)
+            if win_info:
+                game_width = win_info['width']
+        
+        screenshot_path = take_screenshot(window_title)
+        
+        screenshot_fullpath = os.path.join(os.path.dirname(__file__), screenshot_path.replace('..\\', '').replace('../', ''))
+        screenshot = Image.open(screenshot_fullpath)
+        
+        results = find_all_buttons(screenshot, game_name, game_width=game_width)
+        
+        if results:
+            print(f'[{game_name}] Found {len(results)} buttons:')
+            for name, info in results.items():
+                print(f'  - {name}: ({info["x"]}, {info["y"]}) confidence: {info["confidence"]}')
+        else:
+            print(f'[{game_name}] No buttons found')
+        
+        result_data = create_result(
+            'findall',
+            windowTitle=window_title,
+            game=game_name,
+            buttons=results,
+            screenshotPath=screenshot_path
+        )
+        print(json.dumps(result_data, indent=2, ensure_ascii=False))
+        return results
+    except Exception as e:
+        print(f'[ERROR] {e}')
+        sys.exit(1)
+
+def handle_buttons(args):
+    game_name = get_game_id(args.game_name)
+    
+    buttons = list_available_buttons(game_name)
+    
+    if buttons:
+        print(f'[{game_name}] Available button templates:')
+        for btn in buttons:
+            print(f'  - {btn}')
+    else:
+        print(f'[{game_name}] No button templates available')
+    
+    result_data = create_result('buttons', game=game_name, buttons=buttons)
+    print(json.dumps(result_data, indent=2, ensure_ascii=False))
+    return buttons
+
+def handle_click_text(args):
+    text = args.text
+    window_title = args.window_title
+    provider = args.provider if hasattr(args, 'provider') and args.provider else None
+    
+    try:
+        api_key = get_api_key()
+        if not api_key:
+            print('[ERROR] 未配置 API Key')
+            print('请通过以下方式之一配置:')
+            print('  1. 设置环境变量: DASHSCOPE_API_KEY')
+            print('  2. 编辑 config.json 文件')
+            print('  3. 运行: python main.py config --set-api-key YOUR_KEY')
+            sys.exit(1)
+        
+        if window_title:
+            activate_window(window_title)
+            time.sleep(0.2)
+        
+        screenshot_path = take_screenshot(window_title)
+        screenshot_fullpath = os.path.join(os.path.dirname(__file__), 
+                                           screenshot_path.replace('..\\', '').replace('../', ''))
+        screenshot = Image.open(screenshot_fullpath)
+        
+        agent_config = get_gui_agent_config()
+        if provider:
+            agent_config['provider'] = provider
+        
+        agent = get_agent(
+            provider or agent_config.get('provider', 'aliyun'),
+            api_key=api_key,
+            base_url=agent_config.get('base_url'),
+            model=agent_config.get('model')
+        )
+        
+        print(f'[{agent.name}] Analyzing: "{text}"...')
+        
+        result = agent.click_element(screenshot, text)
+        
+        if result.success and result.actions:
+            action = result.actions[0]
+            x, y = action.x, action.y
+            
+            if args.dry_run:
+                print(f'[DRY-RUN] Would click at ({x}, {y})')
+                result_data = create_result(
+                    'click_text',
+                    text=text,
+                    windowTitle=window_title,
+                    x=x,
+                    y=y,
+                    dryRun=True,
+                    screenshotPath=screenshot_path
+                )
+            else:
+                win_info = get_window_info(window_title) if window_title else None
+                
+                is_genshin = window_title and ('原神' in window_title or 'genshin' in window_title.lower())
+                
+                if is_genshin:
+                    key_down('alt')
+                
+                if win_info:
+                    click(x, y, window_title, background=False)
+                else:
+                    import pyautogui
+                    pyautogui.click(x, y)
+                
+                if is_genshin:
+                    time.sleep(0.1)
+                    key_up('alt')
+                
+                time.sleep(0.2)
+                after_screenshot_path = take_screenshot(window_title)
+                
+                print(f'[{agent.name}] Clicked "{text}" at ({x}, {y})')
+                result_data = create_result(
+                    'click_text',
+                    text=text,
+                    windowTitle=window_title,
+                    x=x,
+                    y=y,
+                    provider=agent.provider,
+                    model=agent.name,
+                    screenshotPath=screenshot_path,
+                    afterScreenshotPath=after_screenshot_path
+                )
+        else:
+            print(f'[{agent.name}] Element "{text}" not found')
+            if result.error:
+                print(f'[ERROR] {result.error}')
+            result_data = create_result(
+                'click_text',
+                text=text,
+                windowTitle=window_title,
+                found=False,
+                error=result.error,
+                screenshotPath=screenshot_path
+            )
+        
+        print(json.dumps(result_data, indent=2, ensure_ascii=False))
+        return result_data
+        
+    except Exception as e:
+        print(f'[ERROR] {e}')
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
+
+def handle_config(args):
+    if hasattr(args, 'set_api_key') and args.set_api_key:
+        from scripts.config import set_api_key
+        set_api_key(args.set_api_key, args.provider if hasattr(args, 'provider') else 'aliyun')
+        print(f'[config] API Key saved')
+        return
+    
+    if hasattr(args, 'show') and args.show:
+        from scripts.config import load_config
+        config = load_config()
+        if 'gui_agent' in config and 'api_key' in config['gui_agent']:
+            key = config['gui_agent']['api_key']
+            config['gui_agent']['api_key'] = key[:8] + '***' + key[-4:] if len(key) > 12 else '***'
+        print(json.dumps(config, indent=2, ensure_ascii=False))
+        return
+    
+    if hasattr(args, 'list_agents') and args.list_agents:
+        agents = list_available_agents()
+        print('Available GUI Agents:')
+        for agent in agents:
+            print(f'  - {agent}')
+        return
+    
+    print('Usage: python main.py config --set-api-key KEY | --show | --list-agents')
+
 def handle_windows(args):
     windows = list_windows()
     for i, win in enumerate(windows, 1):
@@ -262,6 +553,31 @@ def main():
     parser_hold.add_argument('hold_ms', type=int, help='按住时间（毫秒）')
     parser_hold.add_argument('window_title', nargs='?', help='窗口标题（可选）')
     
+    parser_find = subparsers.add_parser('find', help='查找按钮')
+    parser_find.add_argument('button_name', help='按钮名称')
+    parser_find.add_argument('window_title', help='窗口标题')
+    parser_find.add_argument('--game', help='游戏名称')
+    parser_find.add_argument('--threshold', type=float, default=0.8, help='匹配阈值')
+    
+    parser_findall = subparsers.add_parser('findall', help='查找所有按钮')
+    parser_findall.add_argument('window_title', help='窗口标题')
+    parser_findall.add_argument('--game', help='游戏名称')
+    
+    parser_buttons = subparsers.add_parser('buttons', help='列出可用按钮')
+    parser_buttons.add_argument('game_name', help='游戏名称')
+    
+    parser_click_text = subparsers.add_parser('click_text', help='通过文字描述点击按钮')
+    parser_click_text.add_argument('text', help='按钮文字描述')
+    parser_click_text.add_argument('window_title', nargs='?', help='窗口标题（可选）')
+    parser_click_text.add_argument('--provider', help='GUI Agent 提供商')
+    parser_click_text.add_argument('--dry-run', action='store_true', help='仅分析不执行')
+    
+    parser_config = subparsers.add_parser('config', help='配置管理')
+    parser_config.add_argument('--set-api-key', help='设置 API Key')
+    parser_config.add_argument('--provider', default='aliyun', help='提供商')
+    parser_config.add_argument('--show', action='store_true', help='显示当前配置')
+    parser_config.add_argument('--list-agents', action='store_true', help='列出可用的 Agent')
+    
     parser_windows = subparsers.add_parser('windows', help='列出所有窗口')
     
     args = parser.parse_args()
@@ -277,6 +593,11 @@ def main():
         'rightclick': handle_rightclick,
         'key': handle_key,
         'hold': handle_hold,
+        'find': handle_find,
+        'findall': handle_findall,
+        'buttons': handle_buttons,
+        'click_text': handle_click_text,
+        'config': handle_config,
         'windows': handle_windows,
     }
     
