@@ -58,14 +58,14 @@
 
 ### 截图获取
 ```bash
-# 获取当前游戏画面
-npx tsx scripts/index.ts capture "原神"
+python main.py capture "原神"
 ```
 
 ### 操作执行
 ```bash
-# 点击指定坐标
-npx tsx scripts/index.ts click 540 820
+python main.py click 540 820 "原神"
+python main.py key Escape "原神"
+python main.py hold W 2000 "原神"
 ```
 
 ### 画面分析

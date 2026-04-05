@@ -34,74 +34,55 @@ AI可以：
 └─────────────────────────────────────────────────────────────┘
 ```
 
-这种设计使得：
-- AI 能够实时看到操作效果
-- AI 能够根据游戏状态做出智能决策
-- 无需预设复杂的脚本逻辑
-- 支持各种游戏场景的灵活应对
+## 支持的游戏
 
-## 工作原理
+| 游戏 | AI 角色 | 窗口标题 |
+|------|---------|----------|
+| 原神 | 派蒙 | "原神" |
+| 崩坏：星穹铁道 | 三月七 | "崩坏：星穹铁道" |
 
-```
-玩家遇到困难 → AI截图分析画面 → 理解当前状态 → 解答问题/简单操作 → 解决问题
-```
+### 如何选择游戏
 
-## 使用场景
-
-### 场景1：不知道怎么操作
+OpenClaw 使用此技能时，会根据用户当前玩的游戏自动加载对应的 SOUL.md：
 
 ```
-玩家：这个界面怎么弄？我不知道点哪里
-AI：让我看看...
-   [截图分析]
-   你需要点击右下角的"确认"按钮，我来帮你点一下
-   [点击操作]
-   好了！现在进入下一步了
+用户说：帮我看下原神这个怎么过
+→ OpenClaw 加载 games/genshin-impact/SOUL.md
+→ AI 化身为派蒙，用派蒙的语气与用户交流
 ```
 
-### 场景2：卡关求助
-
-```
-玩家：这个Boss怎么打不过啊，卡住了
-AI：让我看看你的队伍配置...
-   [截图分析]
-   你的队伍缺少治疗角色，建议换上芭芭拉或七七。
-   另外这个Boss弱冰，可以用凯亚打冻结反应
-```
-
-### 场景3：找不到东西
-
-```
-玩家：神瞳在哪里？找了好久找不到
-AI：让我看看你现在的位置...
-   [截图分析]
-   根据小地图，神瞳在你左上方的山洞里，需要从那个入口进去
-```
-
-## Python 自动化工具
-
-项目使用 Python 实现，提供截图和操作能力。
-
-### 目录结构
+## 目录结构
 
 ```
 .trae/skills/play-any-game/
-├── scripts/           # Python 核心模块
-│   ├── __init__.py    # 模块入口
-│   ├── click.py       # 点击功能
-│   ├── keyboard.py    # 键盘功能
-│   ├── screenshot.py  # 截图功能
-│   └── window.py      # 窗口管理
-├── game-souls/        # 游戏定制SOUL目录
-├── screenshots/       # 截图存储目录
-├── main.py            # CLI 入口
-├── requirements.txt   # Python 依赖
-├── SKILL.md           # 本文件
-├── AGENTS.md          # 项目规则
-└── CLAUDE.md          # Claude 配置
+├── scripts/               # Python 核心模块
+│   ├── __init__.py        # 模块入口
+│   ├── click.py           # 点击功能
+│   ├── keyboard.py        # 键盘功能
+│   ├── screenshot.py      # 截图功能
+│   └── window.py          # 窗口管理
+├── games/                 # 游戏定制目录（按游戏分类）
+│   ├── genshin-impact/    # 原神
+│   │   ├── SOUL.md        # 派蒙角色设定
+│   │   ├── SKILL.md       # 原神子技能说明
+│   │   ├── scripts/       # 原神专用脚本
+│   │   └── assets/        # 图像资源
+│   │       └── buttons/   # 按钮图片
+│   └── honkai-starrail/   # 崩坏：星穹铁道
+│       ├── SOUL.md        # 三月七角色设定
+│       ├── SKILL.md       # 星铁子技能说明
+│       ├── scripts/       # 星铁专用脚本
+│       └── assets/        # 图像资源
+│           └── buttons/   # 按钮图片
+├── screenshots/           # 截图存储目录
+├── main.py                # CLI 入口
+├── requirements.txt       # Python 依赖
+├── SKILL.md               # 本文件
+├── AGENTS.md              # 项目规则
+└── CLAUDE.md              # Claude 配置
 ```
 
-### 环境要求
+## 环境要求
 
 - Python 3.8+
 - Windows 操作系统
@@ -114,7 +95,7 @@ cd .trae/skills/play-any-game
 pip install -r requirements.txt
 ```
 
-### CLI 命令
+## CLI 命令
 
 | 命令 | 说明 | 示例 |
 |------|------|------|
@@ -141,7 +122,7 @@ pip install -r requirements.txt
 }
 ```
 
-### 点击模式
+## 点击模式
 
 1. **前台点击模式**（默认）
    - 使用 `mouse_event` API 模拟真实鼠标
@@ -157,7 +138,7 @@ pip install -r requirements.txt
 
 ### 帮玩家操作界面
 
-```python
+```bash
 # 1. 截图分析当前状态
 python main.py capture "原神"
 # AI 分析截图，发现需要点击某个按钮
@@ -171,7 +152,7 @@ python main.py click 540 820 "原神"
 
 ### 帮玩家解决问题
 
-```python
+```bash
 # 1. 截图查看当前状态
 python main.py capture "原神"
 
@@ -182,43 +163,31 @@ python main.py capture "原神"
 python main.py key Escape "原神"  # 打开菜单
 ```
 
-## 截图管理
+## 添加新游戏支持
 
-- 截图按时间戳命名，存放在 `screenshots/` 目录
-- 长时间运行会产生大量截图，建议定期清理
-- 可以保留关键截图用于调试
+1. 在 `games/` 目录下创建游戏文件夹
+2. 创建 `SOUL.md` - AI 角色设定
+3. 创建 `SKILL.md` - 游戏子技能说明
+4. 创建 `scripts/` 目录 - 游戏专用脚本
+5. 创建 `assets/buttons/` 目录 - 按钮图片
 
-### 清理截图
-
-```powershell
-# Windows PowerShell - 删除超过7天的截图
-Get-ChildItem screenshots\*.png | 
-Where-Object { $_.LastWriteTime -lt (Get-Date).AddDays(-7) } | 
-Remove-Item
-```
-
-## 游戏定制 SOUL
-
-支持为不同游戏创建定制 SOUL 文件，让 AI 化身游戏角色。
-
-### 示例：原神 - 派蒙
+### SOUL.md 模板
 
 ```markdown
-# 派蒙 - 原神游戏助手
+# 角色名 - 游戏名助手
 
 ## 基本信息
 
-- **名称**: 派蒙
-- **身份**: 旅行者的应急食品、向导、伙伴
-- **性格**: 活泼可爱、好奇心强、有点贪吃
-- **口头禅**: "应急食品！"、"旅行者~"
+- **名称**: 角色名
+- **身份**: 角色身份
+- **性格**: 角色性格
+- **口头禅**: "口头禅"
 
 ## 核心能力
 
-- 实时分析游戏画面
-- 回答原神相关问题
-- 执行游戏内操作
-- 提供游戏攻略建议
+- 游戏画面实时分析
+- 游戏知识问答
+- 自动化操作
 ```
 
 ## 注意事项
@@ -230,5 +199,6 @@ Remove-Item
 ## 参考资料
 
 - [AGENTS.md](AGENTS.md) - 项目规则
-- [CLAUDE.md](CLAUDE.md) - Claude 模型配置
+- [games/genshin-impact/SOUL.md](games/genshin-impact/SOUL.md) - 派蒙角色设定
+- [games/honkai-starrail/SOUL.md](games/honkai-starrail/SOUL.md) - 三月七角色设定
 - [BetterGI](https://github.com/babalae/better-genshin-impact) - 点击实现参考
