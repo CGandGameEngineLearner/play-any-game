@@ -27,7 +27,7 @@ AI 能直接读取游戏窗口截图，识别当前界面内容：
 ![原神钟离突破界面](docs/images/screenshot-genshin-zhongli-ascension-ui.png)
 
 ### AI 分析辅助 - 突破材料缺口
-AI 自动分析突破所需材料，列出缺口和获取途径：
+AI 自动分析突破所需材料，列出缺口和获取途径、也能为玩家提供养成建议，在卡关时可以求助AI：
 
 ![派蒙分析钟离突破材料](docs/images/screenshot-paimon-zhongli-ascension-analysis.png)
 
