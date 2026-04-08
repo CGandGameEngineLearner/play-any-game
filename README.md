@@ -142,6 +142,14 @@ pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 
 ### 🔑 Step 3：配置 API Key
 
+本项目使用 **阿里云百炼 GUI-Plus 模型**（`gui-plus-2026-02-26`）进行游戏界面识图与操作决策：
+
+- **调用方式**：OpenAI 兼容接口 + Function Calling（`tool_calls`）
+- **接口地址**：`https://dashscope.aliyuncs.com/compatible-mode/v1`
+- **模型**：`gui-plus-2026-02-26`（混合思考模型，支持识图 + GUI 操作规划）
+- **实现代码**：[`scripts/gui_agent/aliyun.py`](scripts/gui_agent/aliyun.py)
+- **官方文档**：[阿里云 GUI-Plus 接口文档](https://bailian.console.aliyun.com/cn-beijing?tab=api#/api/?type=model&url=2997660)
+
 ```bash
 # 方式1：命令行配置（推荐，会保存到本地 config.json）
 python main.py config --set-api-key YOUR_DASHSCOPE_API_KEY
@@ -150,7 +158,7 @@ python main.py config --set-api-key YOUR_DASHSCOPE_API_KEY
 set DASHSCOPE_API_KEY=YOUR_DASHSCOPE_API_KEY
 ```
 
-> **获取 API Key**：前往 [阿里云百炼平台](https://bailian.console.aliyun.com/) 创建 API Key。
+> **获取 API Key**：前往 [阿里云百炼平台](https://bailian.console.aliyun.com/) → API-KEY 管理 → 创建 API Key。
 
 ### ✅ Step 4：验证安装
 
