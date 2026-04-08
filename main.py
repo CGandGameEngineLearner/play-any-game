@@ -522,6 +522,115 @@ def handle_windows(args):
     print(json.dumps(result, indent=2, ensure_ascii=False))
     return windows
 
+def load_games_config() -> dict:
+    """加载游戏配置"""
+    config_path = os.path.join(os.path.dirname(__file__), 'games', 'games.json')
+    if os.path.exists(config_path):
+        with open(config_path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {'games': {}, 'default': {}}
+
+def find_game_by_keyword(keyword: str) -> Optional[str]:
+    """通过关键词查找游戏ID"""
+    config = load_games_config()
+    keyword_lower = keyword.lower()
+    
+    for game_id, game_info in config.get('games', {}).items():
+        if keyword_lower == game_id.lower():
+            return game_id
+        if keyword_lower == game_info.get('name', '').lower():
+            return game_id
+        if keyword_lower == game_info.get('nameEn', '').lower():
+            return game_id
+        for kw in game_info.get('keywords', []):
+            if keyword_lower == kw.lower():
+                return game_id
+    
+    return None
+
+def handle_game(args):
+    """处理游戏相关命令"""
+    subcommand = args.subcommand
+    
+    config = load_games_config()
+    
+    if subcommand == 'list':
+        games = config.get('games', {})
+        print('Supported games:')
+        for game_id, game_info in games.items():
+            print(f'  - {game_id}: {game_info.get("name", game_id)} ({game_info.get("character", "Unknown")})')
+        
+        result = create_result(
+            'game',
+            subaction='list',
+            games={gid: {'name': g.get('name'), 'character': g.get('character')} for gid, g in games.items()}
+        )
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return result
+    
+    elif subcommand == 'start':
+        game_name = args.game_name
+        game_id = find_game_by_keyword(game_name)
+        
+        if not game_id:
+            print(f'[ERROR] Unknown game: {game_name}')
+            print('Use "python main.py game list" to see supported games')
+            sys.exit(1)
+        
+        game_info = config['games'][game_id]
+        soul_path = game_info.get('soulPath', f'games/{game_id}/SOUL.md')
+        
+        print(f'[game] Starting: {game_info.get("name", game_id)}')
+        print(f'[game] Character: {game_info.get("character", "Unknown")}')
+        print(f'[game] SOUL: {soul_path}')
+        
+        result = create_result(
+            'game',
+            subaction='start',
+            gameId=game_id,
+            gameName=game_info.get('name', game_id),
+            character=game_info.get('character'),
+            windowTitle=game_info.get('windowTitle'),
+            soulPath=soul_path
+        )
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return result
+    
+    elif subcommand == 'end':
+        default_info = config.get('default', {})
+        soul_path = default_info.get('soulPath', 'games/default/SOUL.md')
+        
+        print(f'[game] Ending game session')
+        print(f'[game] Restoring default SOUL: {soul_path}')
+        
+        result = create_result(
+            'game',
+            subaction='end',
+            soulPath=soul_path,
+            character=default_info.get('character', 'OpenClaw')
+        )
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return result
+    
+    elif subcommand == 'current':
+        print('[game] Current game session info:')
+        print('  Note: Game session state is managed by OpenClaw')
+        print('  This command returns available games for reference')
+        
+        games = config.get('games', {})
+        result = create_result(
+            'game',
+            subaction='current',
+            games=list(games.keys())
+        )
+        print(json.dumps(result, indent=2, ensure_ascii=False))
+        return result
+    
+    else:
+        print(f'[ERROR] Unknown game subcommand: {subcommand}')
+        print('Usage: python main.py game <list|start|end|current>')
+        sys.exit(1)
+
 def main():
     parser = argparse.ArgumentParser(description='🎮 AI 游戏代肝工具')
     subparsers = parser.add_subparsers(dest='command', help='命令')
@@ -580,6 +689,15 @@ def main():
     
     parser_windows = subparsers.add_parser('windows', help='列出所有窗口')
     
+    parser_game = subparsers.add_parser('game', help='游戏会话管理')
+    game_subparsers = parser_game.add_subparsers(dest='subcommand', help='子命令')
+    
+    parser_game_list = game_subparsers.add_parser('list', help='列出支持的游戏')
+    parser_game_start = game_subparsers.add_parser('start', help='开始游戏会话')
+    parser_game_start.add_argument('game_name', help='游戏名称或ID')
+    parser_game_end = game_subparsers.add_parser('end', help='结束游戏会话')
+    parser_game_current = game_subparsers.add_parser('current', help='显示当前游戏')
+    
     args = parser.parse_args()
     
     if not args.command:
@@ -599,6 +717,7 @@ def main():
         'click_text': handle_click_text,
         'config': handle_config,
         'windows': handle_windows,
+        'game': handle_game,
     }
     
     handler = commands.get(args.command)

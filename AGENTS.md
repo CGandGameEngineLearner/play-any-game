@@ -112,6 +112,12 @@ python main.py windows
 python main.py config --set-api-key YOUR_KEY
 python main.py config --show
 python main.py config --list-agents
+
+# 游戏会话管理（SOUL 切换）
+python main.py game list
+python main.py game start 原神
+python main.py game end
+python main.py game current
 ```
 
 ### 2. 输出格式处理
@@ -130,6 +136,9 @@ OpenClaw 应支持加载和使用 `games/` 目录下的游戏定制SOUL文件：
 
 ```
 games/
+├── games.json            # 游戏配置文件
+├── default/              # 默认 SOUL（退出游戏时恢复）
+│   └── SOUL.md          # OpenClaw 默认人设
 ├── genshin-impact/       # 原神
 │   ├── SOUL.md          # 派蒙角色设定
 │   └── SKILL.md         # 原神子技能说明
@@ -138,18 +147,94 @@ games/
     └── SKILL.md         # 星铁子技能说明
 ```
 
-**使用方式**：
-- 根据用户当前玩的游戏选择相应的 `games/<游戏名>/SOUL.md`
-- 加载 SOUL.md 后，AI 应化身为该角色，使用角色的语气与用户交流
-- 遵循 SOUL 文件中定义的角色性格和交互方式
+#### SOUL 切换流程
 
-**示例**：
 ```
-用户说：帮我看下原神这个怎么过
-→ OpenClaw 加载 games/genshin-impact/SOUL.md
-→ AI 化身为派蒙，用派蒙的语气与用户交流
-→ "旅行者，让我看看..."
+┌─────────────────────────────────────────────────────────────┐
+│                    SOUL 切换流程                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  用户: "我要玩原神"                                          │
+│       ↓                                                     │
+│  OpenClaw 调用: python main.py game start 原神              │
+│       ↓                                                     │
+│  返回: { soulPath: "games/genshin-impact/SOUL.md" }         │
+│       ↓                                                     │
+│  OpenClaw 读取 SOUL.md → 替换自己的系统提示                   │
+│       ↓                                                     │
+│  AI 化身为派蒙与用户交互                                      │
+│                                                             │
+├─────────────────────────────────────────────────────────────┤
+│                                                             │
+│  用户: "不玩了" / "退出游戏"                                  │
+│       ↓                                                     │
+│  OpenClaw 调用: python main.py game end                     │
+│       ↓                                                     │
+│  返回: { soulPath: "games/default/SOUL.md" }                │
+│       ↓                                                     │
+│  OpenClaw 恢复默认 SOUL                                      │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
 ```
+
+#### game 命令
+
+```bash
+# 列出支持的游戏
+python main.py game list
+
+# 开始游戏会话（切换到对应 SOUL）
+python main.py game start 原神
+python main.py game start genshin-impact
+python main.py game start 星铁
+
+# 结束游戏会话（恢复默认 SOUL）
+python main.py game end
+
+# 显示当前游戏信息
+python main.py game current
+```
+
+#### 返回格式
+
+**game start 返回：**
+```json
+{
+  "action": "game",
+  "subaction": "start",
+  "gameId": "genshin-impact",
+  "gameName": "原神",
+  "character": "派蒙",
+  "windowTitle": "原神",
+  "soulPath": "games/genshin-impact/SOUL.md"
+}
+```
+
+**game end 返回：**
+```json
+{
+  "action": "game",
+  "subaction": "end",
+  "soulPath": "games/default/SOUL.md",
+  "character": "OpenClaw"
+}
+```
+
+#### OpenClaw 实现要点
+
+1. **监听用户意图**：当用户说"我要玩XX游戏"、"帮我在XX游戏里..."时，识别游戏名称
+2. **调用 game start**：调用 `python main.py game start <游戏名>` 获取 SOUL 路径
+3. **读取并替换 SOUL**：读取 `soulPath` 指向的 SOUL.md 文件内容，替换自己的系统提示
+4. **保持角色**：在游戏会话期间，始终保持对应角色的语气和性格
+5. **监听退出意图**：当用户说"不玩了"、"退出游戏"时，调用 `python main.py game end`
+6. **恢复默认**：读取默认 SOUL.md 并恢复
+
+#### 支持的游戏关键词
+
+| 游戏 | 关键词 |
+|------|--------|
+| 原神 | 原神、genshin、派蒙、paimon、genshin-impact |
+| 崩坏：星穹铁道 | 星穹铁道、星铁、starrail、崩铁、三月七、honkai-starrail |
 
 ### 4. 截图管理
 
@@ -208,6 +293,9 @@ python main.py click_text "测试按钮" "原神" --dry-run
 │       ├── aliyun.py      # 阿里云 GUI-Plus 实现
 │       └── factory.py     # 工厂模式
 ├── games/                 # 游戏定制目录（按游戏分类）
+│   ├── games.json         # 游戏配置文件
+│   ├── default/           # 默认 SOUL（退出游戏时恢复）
+│   │   └── SOUL.md       # OpenClaw 默认人设
 │   ├── genshin-impact/    # 原神
 │   │   ├── SOUL.md        # 派蒙角色设定
 │   │   └── SKILL.md       # 原神子技能说明
