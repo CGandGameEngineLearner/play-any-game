@@ -200,6 +200,8 @@ python main.py game end
 
 欢迎提交 Issue 和 Pull Request！
 
+**GitHub 仓库**: https://github.com/CGandGameEngineLearner/play-any-game
+
 ## 📄 License
 
 MIT License

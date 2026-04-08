@@ -379,6 +379,9 @@ register_agent("new-model", NewGUIAgent)
 
 ## 参考资料
 
+> 📖 详细的安装说明、模型信息、使用示例请查阅 [README.md](README.md)
+
+- [README.md](README.md) - 项目介绍、安装指南、使用截图
 - [AGENTS.md](AGENTS.md) - 项目规则
 - [games/genshin-impact/SOUL.md](games/genshin-impact/SOUL.md) - 派蒙角色设定
 - [games/honkai-starrail/SOUL.md](games/honkai-starrail/SOUL.md) - 三月七角色设定
