@@ -14,6 +14,23 @@ AI（派蒙）：嗯嗯，让派蒙看一眼！
 搞定啦！这个机关要先激活左边的符文，再点中间的传送阵～
 ```
 
+## 📸 截图展示
+
+### 角色人设切换 - 化身派蒙
+告诉 AI「化身派蒙」，它会立即切换成派蒙的人设和说话风格：
+
+![派蒙人设激活](screenshot-paimon-soul-activated.png)
+
+### 游戏画面识别 - 原神突破界面
+AI 能直接读取游戏窗口截图，识别当前界面内容：
+
+![原神钟离突破界面](screenshot-genshin-zhongli-ascension-ui.png)
+
+### AI 分析辅助 - 突破材料缺口
+AI 自动分析突破所需材料，列出缺口和获取途径：
+
+![派蒙分析钟离突破材料](screenshot-paimon-zhongli-ascension-analysis.png)
+
 ## ✨ 功能特点
 
 - 📸 **截图分析** - 实时看到你的游戏画面，理解当前状态
