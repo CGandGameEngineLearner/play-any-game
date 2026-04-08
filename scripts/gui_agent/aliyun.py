@@ -43,7 +43,7 @@ class AliyunGUIAgent(BaseGUIAgent):
     """
     
     DEFAULT_BASE_URL = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-    DEFAULT_MODEL = "gui-plus"
+    DEFAULT_MODEL = "gui-plus-2026-02-26"
     
     def __init__(
         self,

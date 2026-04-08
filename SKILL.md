@@ -334,8 +334,14 @@ python main.py click 540 820 "原神"
 
 | Provider | 模型 | 说明 |
 |----------|------|------|
-| aliyun | gui-plus | 阿里云 GUI-Plus（默认） |
-| aliyun | gui-plus-2026-02-26 | 阿里云 GUI-Plus 新版 |
+| aliyun | gui-plus-2026-02-26 | 阿里云 GUI-Plus（默认，混合思考模型） |
+| aliyun | gui-plus | 阿里云 GUI-Plus 旧版 |
+
+**模型调用方式：** 通过 OpenAI 兼容接口调用，实现代码见 [`scripts/gui_agent/aliyun.py`](scripts/gui_agent/aliyun.py)
+
+- **base_url**: `https://dashscope.aliyuncs.com/compatible-mode/v1`
+- **model**: `gui-plus-2026-02-26`（在 `AliyunGUIAgent` 中通过 `DEFAULT_MODEL` 指定）
+- **API 文档**: [阿里云 GUI-Plus 接口文档](https://bailian.console.aliyun.com/cn-beijing?tab=api#/api/?type=model&url=2997660)
 
 ### 扩展新模型
 
