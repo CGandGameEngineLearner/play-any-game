@@ -103,28 +103,111 @@ OpenClaw 使用此技能时，通过 `game` 命令切换 SOUL：
 └── requirements.txt       # Python 依赖
 ```
 
-## 环境要求
+## 环境要求与安装指南
 
-- Python 3.8+
-- Windows 操作系统
-- 依赖：pywin32, Pillow, opencv-python, openai
+> **🤖 Agent 必读**：使用此 skill 前，必须确保 Python 3 环境和所有依赖已正确安装。请按照以下步骤逐一执行。
 
-### 安装依赖
+### 系统要求
+
+- **OS**: Windows 10/11（使用 Win32 API 控制窗口和鼠标）
+- **Python**: 3.8 或更高版本
+- **网络**: 需要能访问阿里云 API（用于 AI 识图）
+
+---
+
+### 🐍 Step 1：检查并安装 Python 3
+
+首先检查 Python 是否已安装：
 
 ```bash
-cd .trae/skills/play-any-game
+python --version
+```
+
+**如果命令不存在或版本低于 3.8**，按以下方式安装：
+
+```bash
+# 推荐：使用 winget（Windows 10/11 内置包管理器）
+winget install Python.Python.3.12
+```
+
+安装完成后，**关闭并重新打开终端**，然后验证：
+
+```bash
+python --version   # 应输出 Python 3.12.x（或 3.8+）
+pip --version      # 应输出 pip 版本信息
+```
+
+> ⚠️ 若 `python` 命令仍不可用，请检查安装时是否勾选了 **"Add Python to PATH"**。可以重新运行安装程序，选择 "Modify" → 勾选 "Add Python to PATH"。
+
+---
+
+### 📦 Step 2：安装 Python 依赖
+
+```bash
+# 进入 skill 目录（根据实际路径调整）
+cd skills/play-any-game
+
+# 安装所有依赖
 pip install -r requirements.txt
 ```
 
-### 配置 API Key
+**依赖说明：**
+
+| 包名 | 版本要求 | 用途 |
+|------|---------|------|
+| `pywin32` | >=306 | Windows 窗口管理、鼠标/键盘控制（Win32 API） |
+| `Pillow` | >=10.0.0 | 图像处理、截图保存 |
+| `opencv-python` | >=4.8.0 | 图像识别、模板匹配 |
+| `numpy` | >=1.24.0 | 数值计算（opencv 依赖） |
+| `openai` | >=1.0.0 | 调用阿里云 GUI-Plus AI 模型 API |
+
+**如果安装速度慢，使用国内镜像：**
 
 ```bash
-# 方式1：命令行配置
-python main.py config --set-api-key YOUR_API_KEY
-
-# 方式2：环境变量
-set DASHSCOPE_API_KEY=YOUR_API_KEY
+pip install -r requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple
 ```
+
+**安装后验证依赖：**
+
+```bash
+python -c "import win32api, PIL, cv2, numpy, openai; print('All dependencies OK')"
+```
+
+---
+
+### 🔑 Step 3：配置 API Key
+
+此 skill 使用阿里云百炼平台的 GUI-Plus 模型进行 AI 识图。
+
+```bash
+# 方式1：命令行配置（推荐，持久保存到 config.json）
+python main.py config --set-api-key YOUR_DASHSCOPE_API_KEY
+
+# 方式2：环境变量（临时生效，重启终端后失效）
+set DASHSCOPE_API_KEY=YOUR_DASHSCOPE_API_KEY
+```
+
+**获取 API Key：**
+1. 前往 [阿里云百炼平台](https://bailian.console.aliyun.com/)
+2. 注册/登录账号
+3. 在 "API-KEY 管理" 页面创建新的 API Key
+
+---
+
+### ✅ Step 4：验证安装
+
+```bash
+# 测试1：列出所有窗口（验证 pywin32 正常）
+python main.py windows
+
+# 测试2：截取屏幕（验证 Pillow/截图功能正常）
+python main.py screenshot
+
+# 测试3：查看当前配置（验证 API Key 已设置）
+python main.py config --show
+```
+
+全部命令正常输出，说明环境安装完成。
 
 ## CLI 命令
 
