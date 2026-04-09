@@ -386,3 +386,8 @@ register_agent("new-model", NewGUIAgent)
 - [games/genshin-impact/SOUL.md](games/genshin-impact/SOUL.md) - 派蒙角色设定
 - [games/honkai-starrail/SOUL.md](games/honkai-starrail/SOUL.md) - 三月七角色设定
 - [阿里云 GUI-Plus 文档](https://help.aliyun.com/zh/model-studio/gui-automation)
+
+## 🌐 开源仓库
+
+- **play-any-game**：[https://github.com/CGandGameEngineLearner/play-any-game.git](https://github.com/CGandGameEngineLearner/play-any-game.git)
+- **派蒙.skill**：[https://github.com/CGandGameEngineLearner/paimon-skill.git](https://github.com/CGandGameEngineLearner/paimon-skill.git)
